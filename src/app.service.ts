@@ -2,6 +2,8 @@ import { Injectable, StreamableFile } from '@nestjs/common';
 import * as JSZip from 'jszip';
 import { removeBackground } from '@imgly/background-removal-node';
 import * as fs from 'fs';
+import * as cliProgress from 'cli-progress';
+import * as colors from 'ansi-colors';
 
 @Injectable()
 export class AppService {
@@ -16,29 +18,26 @@ export class AppService {
 
     const removedImages = [];
 
+    const b1 = new cliProgress.SingleBar({
+      format:
+        'In Progress |' +
+        colors.cyan('{bar}') +
+        '| {percentage}% || {value}/{total} Images',
+      barCompleteChar: '\u2588',
+      barIncompleteChar: '\u2591',
+      hideCursor: true,
+    });
+
+    b1.start(imagePaths.length, 0);
+
     for (const imagePath of imagePaths) {
       const removedImage = await this.backGroundRemove(imagePath);
       removedImages.push(removedImage);
+
+      b1.increment();
     }
 
-    const returnBlob = await this.zipping(removedImages);
-
-    return await this.downloadBlob(returnBlob);
-  }
-
-  async action(file: Express.Multer.File) {
-    if (file.mimetype !== 'application/zip') {
-      throw new Error('Invalid file type');
-    }
-
-    const images = await this.unzipping(file);
-
-    const removedImages = [];
-
-    for (const image of images) {
-      const removedImage = await this.backGroundRemove(image);
-      removedImages.push(removedImage);
-    }
+    b1.stop();
 
     const returnBlob = await this.zipping(removedImages);
 
@@ -62,18 +61,6 @@ export class AppService {
       }
     }
     return files;
-  }
-
-  private async unzipping(zipFile: Express.Multer.File): Promise<Blob[]> {
-    const zip = new JSZip();
-    return await zip.loadAsync(zipFile.buffer).then((zip) => {
-      const files = Object.values(zip.files).map((file) => {
-        return file.async('blob').then((blob) => {
-          return blob;
-        });
-      });
-      return Promise.all(files);
-    });
   }
 
   private async zipping(files: Blob[]): Promise<Blob> {
