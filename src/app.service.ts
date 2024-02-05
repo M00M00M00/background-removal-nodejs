@@ -10,7 +10,11 @@ export class AppService {
   async downloadBlob(blob: Blob): Promise<StreamableFile> {
     const buffer = await blob.arrayBuffer();
     const uint8Array = new Uint8Array(buffer);
-    return new StreamableFile(uint8Array);
+    return new StreamableFile(uint8Array, {
+      type: 'application/zip',
+      disposition: 'attachment',
+      length: blob.size,
+    });
   }
 
   async actionWithDirPath(dirPath: string): Promise<StreamableFile> {
