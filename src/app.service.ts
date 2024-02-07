@@ -89,8 +89,11 @@ export class AppService {
   }
 
   private async backGroundRemove(
-    file: Blob | ArrayBuffer | string,
+    fileURI: string,
   ): Promise<Blob> {
-    return await removeBackground(file);
+    if (fileURI.startsWith('C:') || fileURI.startsWith('D:')) {
+      fileURI = `file:///${fileURI}`;
+    }
+    return await removeBackground(fileURI);
   }
 }
